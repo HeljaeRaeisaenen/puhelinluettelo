@@ -6,11 +6,16 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "test": "\"echo \\\"Error: no test specified\\\" && exit 1\""
+    "test": "\"echo \\\"Error: no test specified\\\" && exit 1\"",
+    "build:ui": "rm -rf build && cd ../fs22/osa2/puhelinluettelo/ && npm run build && cp -r build ../../../puhelinluettelo_backend",
+    "deploy": "fly deploy",
+    "deploy:full": "npm run build:ui && npm run deploy",
+    "logs:prod": "fly logs"
   },
   "author": "Heljä Räisänen",
   "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.1",
     "morgan": "^1.10.0"
   },
