@@ -13,27 +13,36 @@ app.use(cors())
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :data'))
 morgan.token('data', function (req, res) {
-    return JSON.stringify(req.body)})
-  
+    return JSON.stringify(req.body)
+  })
+
+
 
 app.get('/', (request, response) => {
     response.send('<p>helo</p>')
 })
 
-app.get('/api/persons', (request, response) => {
-    Person.find({}).then(persons => {
+app.get('/api/persons', (request, response, next) => {
+    Person.find({})
+    .then(persons => {
       response.json(persons)
     })
+    .catch(error => next(error))    
 })
 
-app.get('/api/info', (request, response) => {
-    let info = (`
+app.get('/api/info', (request, response, next) => {
+    Person.find({})
+    .then(persons => {
+      let n = persons.length
+      let info = (`
         <div>
-            <p>Phonebook has info on ${persons.length} people</p>
-            <p> ${new Date()}}</p>
+            <p>Phonebook has info on ${n} people</p>
+            <p> ${new Date()}</p>
         </div>
     `)
     response.send(info)
+    })
+    .catch(error => next(error))    
 })
 
 app.get('/api/persons/:id', (request, response, next) => {
@@ -45,14 +54,7 @@ app.get('/api/persons/:id', (request, response, next) => {
           response.status(404).end()
         }
       })
-      .catch(error => next(error)
-        
-//        {
-//        console.log(error)
-//        response.status(400).send({ error: 'malformatted id' })
-     // }
-      )
-
+      .catch(error => next(error))
 })
 
 app.delete('/api/persons/:id', (request, response, next) => {
@@ -62,35 +64,9 @@ app.delete('/api/persons/:id', (request, response, next) => {
       .catch(error => next(error))    
 })
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
     const body = request.body
-    if (!body.name) {
-        response.status(400).json({ 
-          error: 'name missing' 
-        })
-        return
-      }
-    if (!body.phonenumber) {
-        response.status(400).json({ 
-          error: 'phone number missing' 
-        })
-        return
-      }
-/*
-    if (persons.find(per => per.name === body.name)) {
-        response.status(400).json({ 
-            error: 'name must be unique' 
-          })
-          return
-    }
 
-    if (persons.find(per => per.phonenumber === body.phonenumber)) {
-        response.status(400).json({ 
-            error: 'numbr already in use' 
-          })
-          return
-    }
-*/
     const person = new Person({
         name: body.name,
         phonenumber: body.phonenumber,
@@ -98,10 +74,42 @@ app.post('/api/persons', (request, response) => {
     person.save().then(savedPerson => {
       response.json(savedPerson)
     })
-
-
+    .catch(error => {
+      next(error)})
 })
 
+
+app.put('/api/persons/:id', (request, response, next) => {
+  const body = request.body
+
+  const person = {
+    name: body.name,
+    phonenumber: body.phonenumber
+  }
+
+  Person.findByIdAndUpdate(request.params.id, person, { new: true,
+     runValidators: true, context: 'query' })
+    .then(updatedPerson => {
+      if (typeof updatedPerson === 'null') {
+        //ERRORORROROOROROR palauta joku error reponse
+      }
+      response.json(updatedPerson)
+    })
+    .catch(error => next(error))
+})
+
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message)
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  }
+  if (error.name === 'ValidationError') {
+    return response.status(400).send({ error: error.message })}
+
+  next(error)
+}
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
